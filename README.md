@@ -1,7 +1,7 @@
 # ReactTutorial
 이제부터 정말 간단한 React 튜토리얼을 시작해보겠습니다.
 
-우선 [노드 튜토리얼](https://github.com/Reminsce/NodeTutorial/blob/master/README.md#nodetutorial)과 (리액트 공식 튜토리얼)[https://brunch.co.kr/@hee072794/72]을 해보지 않았다면 먼저 하고 오셔야합니다.  
+우선 [노드 튜토리얼](https://github.com/Reminsce/NodeTutorial/blob/master/README.md#nodetutorial)과 [리액트 공식 튜토리얼](https://brunch.co.kr/@hee072794/72) 을 해보지 않았다면 먼저 하고 오셔야합니다.  
 
 ## React란
 React는 싱글페이지 웹페이지를 제작할 때 최적화되어있습니다. 페이스북에서 만든 프레임워크로, 데이터가 변하기 시작하면 완전히 새로고침되던 기존의 웹과는 달리 데이터가 변한 부분만 새로고침되면 더 효율적이라는 생각으로 만들어지게됩니다.  
