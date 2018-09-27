@@ -277,3 +277,73 @@ const users = this.state.users.map(user => {
 `DB연동`과 같은 비즈니스 로직은 `Node 서버`에서 담당합니다.  
   
 따라서 현재 우리에게 필요한 것은 `Node 서버`와 `데이터 베이스`입니다.
+
+앞서 진행했던 노드 튜토리얼에 이어서 진행하도록 하겠습니다.  
+노드 튜토리얼과 리액트 튜토리얼과의 파일명이 겹칠 수 있으므로 앞으로는 파일명 앞에 튜토리얼명을 언급하겠습니다.  
+`NodeTutorial - index.js`를 다음과 같이 수정해주세요.
+```
+const express = require('express');
+const app = express();
+
+app.get('/', function(req, res) {
+  return res.send('hi');
+});
+
+app.get('/users', function(req, res) {
+  let users = [
+    {
+      name: '이동규',
+      playgrounds: ['계룡', '조와']
+    },
+    {
+      name: '전유정',
+      playgrounds: ['논산', '딸기밭']
+    },
+    {
+      name: '김아정',
+      playgrounds: ['TK']
+    },
+    {
+      name: '남혜미',
+      playgrounds: ['인천', '국제공항']
+    }
+  ];
+  return res.send(users);
+});
+
+app.listen(3002, function() {
+  console.log('server is openned in 3002.');
+});
+```
+이미 알고 있겠지만 `let users`는 리액트 튜토리얼에 있던 변수입니다.
+
+`React Tutorial - index.js`는 다음과 같이 수정해주세요.
+```
+class ShowUser extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+        };
+    }
+    ...
+```
+지금부터 `this.state`의 값을 서버에서 로딩한 값으로 채워넣을 것입니다.
+
+### Nodemon
+작업에 앞서 `노드서버`의 소스를 변경할 때마다 `node index.js` 명령어를 통해 서버를 껐다켜줘야만 변경된 소스가 적용됩니다.  
+이는 매우 귀찮은 일이므로 소스가 변경되면 자동으로 `노드서버`를 재시작해주는 툴을 깔겠습니다.
+
+```
+npm install nodemon -g
+```
+다음 명령어로 `Nodemon`을 설치합니다.  
+사용법 또한 간단합니다.  
+```
+// 기존 = node index.js
+nodemon index.js
+```
+위 명령어로 `노드 서버`를 실행시켜주면 끝입니다!
+
+### Cors
+작업을 하면서 알게된 내용인데 웹에는 Cors(Cross Origin Resource Sharing)를 제한하는 것을 권장하고 있다고 한다.  
+Cors란게 뭐냐면 `localhost:3000` 에서 `localhost:3000/something`으로 접속하는건 전혀 문제되지 않지만 외부 서버에 접속하게 되면 문제가 생긴다. 가령 예를 들면 `www.naver.com`과 같은?
