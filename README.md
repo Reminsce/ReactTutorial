@@ -478,3 +478,91 @@ app.use(cors());
 ```
 이로써 `리액트 서버`에서 `노드 서버`로 접근이 가능해졌습니다.  
   
+## DB 연동
+우선 MySQL을 `노드 서버`에서 사용하기 위한 설치가 필요합니다.
+```
+npm install --save mysql
+```
+`노드서버`에 `db` 디렉토리를 만들고, `db_info.js`를 생성합니다.
+```
+// db_info.js
+module.exports = (function() {
+  return {
+    local: {
+      host: 'localhost',
+      port: '3306',
+      user: 'root',
+      password: 'your password',
+      database: 'TUTORIAL'
+    },
+    real: {
+      host: '',
+      port: '',
+      user: '',
+      password: '',
+      database: 'TUTORIAL'
+    },
+    dev: {
+      host: '',
+      port: '',
+      user: '',
+      password: '',
+      database: 'TUTORIAL'
+    }
+  }
+})();
+```
+`Git`을 쓰고 있는 여러분들도 잘 알다시피 소스코드가 `로컬 소스`, master 브랜치에 해당되는 `운영 소스`, develop 브랜치에 해당되는 `개발 소스`로 나뉘듯이  
+데이터베이스도 그에 맞게 `로컬 DB`, `개발 DB`, `운영 DB`로 나뉘게 됩니다.  
+각각에 상응하는 설정을 적어주면 되며, 현재 저희는 `로컬 DB` 밖에 없으므로 위와 같이 설정해줍니다.  
+  
+마찬가지로 `db`폴더 내에 `db_con.js` 파일을 만들고 다음과 같이 작성합니다.
+```
+// db_con.js
+const mysql = require('mysql');
+const configuration = require('./db_info');
+const local = configuration.local;
+
+module.exports = function() {
+  return {
+    init() {
+      return mysql.createConnection({
+        host: local.host,
+        port: local.port,
+        user: local.user,
+        password: local.password,
+        database: local.database
+      });
+    },
+    
+    test_open(con) {
+      con.connect(function(err) {
+        if (err) {
+          console.error('mysql connection error : ' + err);
+        } else {
+          console.info('mysql is connected successfully');
+        }
+      });
+    }
+  }
+};
+```
+
+이제 `index.js`로 돌아와 맨 윗부분을 다음과 같이 수정합니다.
+```
+const express = require('express');
+const cors = require('cors');
+const app = express();
+const mysql_connector = require('./db/db_con')();
+const conn = mysql_connector.init();
+mysql_connector.test_open(conn);
+```
+  
+그럼 다음과 같이 성공적으로 연결될 것입니다.
+```
+mysql is connected successfully
+```
+
+혹시 `ACCESS DENIED` 관련 에러가 발생하면 비밀번호를 확인해주시면 됩니다.  
+여기까지는 [이곳](https://cheese10yun.github.io/mysql-node/)을 참조하여(?) 사실 거의 베껴왔습니다.  
+
