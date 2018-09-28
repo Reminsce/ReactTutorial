@@ -329,6 +329,119 @@ class ShowUser extends React.Component {
 ```
 지금부터 `this.state`의 값을 서버에서 로딩한 값으로 채워넣을 것입니다.
 
+### axios
+React는 http 통신을 할 능력이 없습니다. 그래서 `axios`라는 모듈의 도움을 필요로 합니다.  
+아래 명령어로 `axios`를 설치합니다.
+```
+npm install --save axios
+```
+설치가 완료되었다면  
+`리액트 튜토리얼 - index.js`파일을 다음과 같이 수정합니다.
+```
+import React from 'react';
+import ReactDOM from 'react-dom';
+import axios from 'axios';
+
+class ShowUser extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+    };
+  }
+  
+  componentDidMount() {
+    axios.get('localhost:3002/users').then(response => {
+      console.log(response);
+    });
+  }
+  
+  render() {
+//     const users = this.state.users.map(user => {
+//       const playgrounds = user.playgrounds.map(playground => {
+//         return (
+//           <li>
+//             {playground}
+//           </li>
+//         );
+//       });
+      
+//       return (
+//         <span>
+//           <li>{user.name}</li>
+//           <ol>
+//             {playgrounds}
+//           </ol>
+//         </span>
+//       );
+//     });
+//     return (<div><ul>{users}</ul></div>);
+    return <div></div>;
+  }
+}
+
+ReactDOM.render(
+  <ShowUser/>,
+  document.getElementById('root')
+);
+```
+새로운 `componentDidMount` 함수가 눈에 띕니다.  
+이 함수는 컴포넌트가 화면에 안정적으로 렌더링 되었을 때(이를 mount라고 표현합니다) 리액트가 자동으로 호출하는 함수입니다.  
+네트워크 처리는 `componentDidMount`에서 처리하는 것이 리액트 권장사항입니다!  
+`axios.get`은 아주 조금 뒤에 다루도록 하고, `localhost:3002/users`에 대해서 먼저 보도록 하겠습니다.  
+`localhost:3002`는 방금 우리가 열었던 `노드서버`의 주소입니다.  
+
+#### Tip
+`주소`는 `호스트네임`과 `포트`로 이루어져있습니다.  
+`localhost` = 호스트네임, `3002`는 포트입니다.  
+이 둘이 온전히 조합되어야 하나의 주소가 됩니다. 즉 `localhost:3000`과 `localhost:3002`는 완전히 다른 서버인 것입니다.
+  
+네이버를 예로 들겠습니다.  
+`www.naver.com`이 호스트네임, `80`이 포트입니다. 80은 디폴트 값으로 아무것도 입력하지 않을 때 적용됩니다.  
+테스트 하고 싶다면 지금 `네이버`에 접속해보세요.  
+그리고 주소 맨 끝에 `www.naver.com:80` 이와 같이 80번 포트를 적어주고 다시 접속해보세요.  
+마찬가지로 80을 다른 수로 바꾼 뒤 접속해보세요.
+  
+  
+`localhost:3002` 뒤에 있는 `/users`는 `노드 튜토리얼 - index.js`에서 호출한 다음 함수 덕분에 생긴 주소 입니다.
+```
+app.get('/users', function(req, res) {
+
+// axios.get('localhost:3002/users')
+```
+눈치 빠른 사람이라면 `노드서버`소스의 `app.get`과 `리액트서버`소스의 `axios.get`이 같은 `get`임을 알 수 있습니다.  
+그렇다면 `노드서버`소스가 `app.post`로 바뀐다면 `리액트서버` 소스도 `axios.post`로 바뀌어야 합니다.
+```
+app.post('/users', function(req, res) {
+
+// axios.post('localhost:3002/users')
+```
+약간의 설명을 하자면, `app.post('/users', function(req, res){`는 `/users` url로는 `post`로만 접근 할 수 있어! 라고 정의내린 것이고, 이에 맞게 `axios`는 `post`방식으로 `/users`에 접근 한 것입니다.  
+당연하겠지만 서로 맞지 않은 메소드로 접근은 불가능합니다.
+
+
+이에 대해 조금 더 알고 싶다면 [다음](http://gyrfalcon.tistory.com/entry/HTTP-%EC%9D%91%EB%8B%B5-%EC%BD%94%EB%93%9C-%EC%A2%85%EB%A5%98-HTTP-%EB%A9%94%EC%86%8C%EB%93%9C-%EC%A2%85%EB%A5%98)을 참조하세요.
+
+#### 결과
+수정된 소스가 적용된 React 페이지에 접속해보면 아무것도 없는 흰 화면만 뜰것입니다.  
+하지만 (크롬 기준) `F12`나 `개발자도구`를 켜보면 오른쪽에 로그가 찍힌것을 확인할 수 있습니다.  
+`console.log('')` 함수 덕분에 생긴 로그입니다.  
+
+![로그](https://user-images.githubusercontent.com/10896116/46197773-a7ca1a80-c345-11e8-8fa3-63deb682266f.PNG)
+
+화살표를 눌러 내용을 확인하다보면 `data` 속성에 다음과 같이 우리가 원하는 정보가 들어있음을 확인할 수 있습니다.  
+```
+data:
+Array(4)
+0:{name: "이동규", playgrounds: Array(2)}
+1:{name: "전유정", playgrounds: Array(2)}
+2:{name: "김아정", playgrounds: Array(1)}
+3:{name: "남혜미", playgrounds: Array(2)}
+length:4
+__proto__:Array(0)
+```
+는 사실 안될 수도 있습니다. ㅋㅋ
+아래에 적어둔 `cors` 파트까지 따라해보고 다시 시도해보십시오. 될겁니다!
+
 ### Nodemon
 작업에 앞서 `노드서버`의 소스를 변경할 때마다 `node index.js` 명령어를 통해 서버를 껐다켜줘야만 변경된 소스가 적용됩니다.  
 이는 매우 귀찮은 일이므로 소스가 변경되면 자동으로 `노드서버`를 재시작해주는 툴을 깔겠습니다.
@@ -336,7 +449,7 @@ class ShowUser extends React.Component {
 ```
 npm install nodemon -g
 ```
-다음 명령어로 `Nodemon`을 설치합니다.  
+위 명령어로 `Nodemon`을 설치합니다.  
 사용법 또한 간단합니다.  
 ```
 // 기존 = node index.js
@@ -345,5 +458,23 @@ nodemon index.js
 위 명령어로 `노드 서버`를 실행시켜주면 끝입니다!
 
 ### Cors
-작업을 하면서 알게된 내용인데 웹에는 Cors(Cross Origin Resource Sharing)를 제한하는 것을 권장하고 있다고 한다.  
-Cors란게 뭐냐면 `localhost:3000` 에서 `localhost:3000/something`으로 접속하는건 전혀 문제되지 않지만 외부 서버에 접속하게 되면 문제가 생긴다. 가령 예를 들면 `www.naver.com`과 같은?
+작업을 하면서 알게된 내용인데 웹에는 Cors(Cross Origin Resource Sharing)를 제한하는 것을 권장하고 있다고 합니다.  
+Cors란게 뭐냐면 `localhost:3002` 에서 `localhost:3002/something`으로 접속하는건 전혀 문제되지 않지만 `localhost:3000`과 같은 외부 서버에서 `localhost:3002`에 접속하게 되면 문제가 생깁니다.  
+쉽게말해서 클라이언트(ex. PC)에서 서버에 접근하는것은 상관 없지만 서버에서 서버로 접근하는 것은 문제가된다는 뜻입니다.  
+우리는 `React서버`에서 `Node서버`로 연결하고 있으니 딱 우리의 경우가 문제가 되는 경우입니다.
+  
+우선 아래 명령어로 cors를 설치합니다.
+```
+npm install --save cors
+```
+
+`노드 튜토리얼 - index.js`의 윗부분을 다음과 같이 수정합니다.
+```
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+app.use(cors());
+```
+이로써 `리액트 서버`에서 `노드 서버`로 접근이 가능해졌습니다.  
+  
