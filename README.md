@@ -566,3 +566,163 @@ mysql is connected successfully
 혹시 `ACCESS DENIED` 관련 에러가 발생하면 비밀번호를 확인해주시면 됩니다.  
 여기까지는 [이곳](https://cheese10yun.github.io/mysql-node/)을 참조하여(?) 사실 거의 베껴왔습니다.  
 
+## 노드에 MySQL 쿼리문 적어보기
+`노드서버 - index.js`를 다음과 같이 수정합니다.
+```
+app.get('/users', function(req, res) {
+  conn.query('SELECT * FROM tbl_users', function(err, result) {
+    if (err) throw err;
+    console.log(result);
+  });
+  
+  let users = [
+  ...
+```
+`localhost:3002/users`에 접속해봅시다.  
+크롬 페이지보다는 `노드 서버`를 실행시켰던 `cmd(또는 터미널)` 창에 아래 사진과 같은 로그가 뜰 것입니다.  
+
+![db](https://user-images.githubusercontent.com/10896116/46241095-e36bef80-c3ec-11e8-99aa-7b7253805dbd.PNG)
+  
+  
+#### 소소한 Tip
+이미 눈치 챘을 수도 있지만 주소창에 url을 입력하고 엔터를 치는 행위는 `get`방식 요청입니다.  
+즉 `app.get('/users')` 는 `axios.get('localhost:3002/users')`로 접근 가능하지만 브라우저 주소창에 `localhost:3002/users`를 입력하고 엔터치는 방법으로도 접근할 수 있습니다.  
+  
+어찌됐든 mysql과 연결된 `conn`을 통해 원하는 쿼리를 날리면 `result`를 통해 결과값이 넘어옵니다.  
+로그를 보면 다소 이상한 형태라고 생각할 수 있는데 사실 그냥 `json`형태 입니다.  
+
+즉
+```
+[{
+    id: '20161234',
+    name: 'aaaaajeong'
+},{
+    id: '20161818',
+    name: 'yujeong'
+},{
+    id: '20162489',
+    name: 'dongkyoo'
+},{
+    id: '20169876',
+    name: 'ham'
+}]
+```
+인 것입니다. 하지만 이는 클라이언트에서 원하는 형태가 아닙니다.  
+클라이언트는 `name`과 `client`를 원하고 있으므로 우리는 다음과 같은 형태를 목표로 합니다.  
+```
+[
+    {
+      name: '이동규',
+      playgrounds: ['계룡', '조와']
+    },
+    {
+      name: '전유정',
+      playgrounds: ['논산', '딸기밭']
+    },
+    {
+      name: '김아정',
+      playgrounds: ['TK']
+    },
+    {
+      name: '남혜미',
+      playgrounds: ['인천', '국제공항']
+    }
+];
+```
+조금 더 개선된 버전은 다음과 같습니다.
+```
+[
+    {
+      id: '20162489',
+      name: '이동규',
+      playgrounds: ['계룡', '조와']
+    },
+    {
+      id: '20161818',
+      name: '전유정',
+      playgrounds: ['논산', '딸기밭']
+    },
+    {
+      id: '20161234',
+      name: '김아정',
+      playgrounds: ['TK']
+    },
+    {
+      id: '20169876',
+      name: '남혜미',
+      playgrounds: ['인천', '국제공항']
+    }
+];
+```
+
+`노드서버 - index.js`를 다음과 같이 수정합니다.
+```
+conn.query('SELECT u.id, u.name, p.playground FROM tbl_users u LEFT JOIN tbl_user_playgrounds p ON p.user_id = u.id', function(err, result) {
+    if (err) throw err;
+    console.log(result);
+  });
+```
+
+쿼리문을 좋기보게 쓰면 다음과 같습니다.
+```
+SELECT
+    u.id, u.name, p.playground
+FROM tbl_users u
+LEFT JOIN tbl_user_playgrounds p
+ON p.user_id = u.id
+```
+우선 `tbl_users u`는 `tbl_users`의 별명을 `u`라고 지정한 것입니다.  
+마찬가지로 `tbl_user_playgrounds p`는 `tbl_user_playgrounds`의 별명을 `p`라고 지정한 것입니다.  
+
+### JOIN
+`Join`은 `A테이블`과 `B테이블`이 있을 때 이 둘을 엮어서 하나의 테이블처럼 생각할 수 있는 기능이다.  
+- JOIN = 양 테이블이 ON 조건과 모두 일치하는 경우
+- LEFT JOIN = 왼쪽 테이블은 무조건 출력되고 오른쪽 테이블만 ON 조건과 일치하는 경우
+  
+말로는 어려우니 예를 들어 설명하겠습니다. 참고로 현재 tbl_user_playgrounds에는 아무 데이터도 없는 상황입니다.
+```
+// JOIN
+SELECT
+    u.id, u.name, p.playground
+FROM tbl_users u
+JOIN tbl_user_playgrounds p
+ON p.user_id = u.id
+// Return Null
+```
+에서
+```
+SELECT
+    u.id, u.name, p.playground
+FROM tbl_users u
+JOIN tbl_user_playgrounds p
+```
+까지는 `tbl_users`와 `tbl_user_playgrounds`를 묶었다. 라는 의미입니다.  
+하지만 중요한건 그 다음입니다.
+`ON` 조건에 맞는 ROW끼리 묶이게 되는데
+`tbl_users`의 id와 `tbl_user_playgrounds`의 user_id가 일치하는 row는 묶는다! 라는 의미가 됩니다.  
+하지만 `tbl_users`의 `id`인 `20162489`와 `tbl_user_playgrounds`의 `user_id`가 `20162489`인 row가 없기 때문에 `20162489`는 결과값에서 제외됩니다.  
+마찬가지로 `tbl_users`의 `id`인 `20161818`과 `tbl_user_playgrounds`의 `user_id`가 `20161818`인 row가 없기 때문에 `20161818` 또한 결과값에서 제외됩니다.  
+결국 어떠한 값도 매칭되지 못하고 쿼리 결과값은 `Null`이 되게 됩니다.
+```
+// LEFT JOIN
+SELECT
+    u.id, u.name, p.playground
+FROM tbl_users u
+JOIN tbl_user_playgrounds p
+ON p.user_id = u.id
+// Return [{u.id='20162489', u.name='dongkyoo', p.playground=null}, {...}, ...]
+```
+하지만 `Left JOIN`은 왼쪽(쿼리를 일렬로 적었을 때 기준, 즉 tbl_users)의 결과는 무조건 출력한 뒤 오른쪽의 결과만 `ON` 조건에 맞춰서 붙여줍니다.  
+즉 `[{u.id='20162489', u.name='dongkyoo', p.playground=null}, {...}, ...]` 과 같은 형태로 값이 리턴되게 됩니다.  
+  
+조금 더 확실히 해보기 위해서 `tbl_user_playgrounds`에 값을 넣어보겠습니다.  
+
+![db2](https://user-images.githubusercontent.com/10896116/46241421-adcb0480-c3f4-11e8-8ca0-aeabfbd8b7bb.PNG)
+  
+`JOIN 결과`  
+![db3](https://user-images.githubusercontent.com/10896116/46241438-fb477180-c3f4-11e8-8c12-296bd104b6bb.PNG)
+  
+`LEFT JOIN 결과`  
+![db4](https://user-images.githubusercontent.com/10896116/46241439-fb477180-c3f4-11e8-8018-91a9e9c529e1.PNG)
+
+차이가 눈에 보이시나요?
