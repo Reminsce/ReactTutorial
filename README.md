@@ -6,6 +6,199 @@
 ## React란
 React는 싱글페이지 웹페이지를 제작할 때 최적화되어있습니다. 페이스북에서 만든 프레임워크로, 데이터가 변하기 시작하면 완전히 새로고침되던 기존의 웹과는 달리 데이터가 변한 부분만 새로고침되면 더 효율적이라는 생각으로 만들어지게됩니다.  
 
+## React 서버와 Node 서버 합치기..!
+기존에 프로젝트 디렉토리에 있던 파일은 다 지우고
+`npm init` 명령어를 칩시다.
+
+`package.json`을 다음과 같이 수정합니다.
+```
+{
+  "name": "reacttutorial",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "webpack"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Reminsce/ReactTutorial.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/cli": "^7.0.0",
+    "express": "^4.16.3",
+    "mysql2": "^1.6.1",
+    "npm": "^6.4.1",
+    "sequelize": "^4.39.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.1.2",
+    "@babel/preset-env": "^7.1.0",
+    "@babel/preset-react": "^7.0.0",
+    "babel-core": "^7.0.0-bridge.0",
+    "babel-loader": "^8.0.4",
+    "html-loader": "^0.5.5",
+    "html-webpack-plugin": "^3.2.0",
+    "react": "^16.5.2",
+    "react-dom": "^16.5.2",
+    "webpack": "^4.20.2",
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-middleware": "^3.4.0",
+    "webpack-dev-server": "^3.1.9"
+  }
+}
+```
+그리고 `npm install`.
+
+
+설치가 완료됐으면 폴더를 미리 만들어둡시다.  
+```
+mkdir -p public src/server src/client
+```
+  
+  
+`babel` 설정을 위한 `.babelrc` 파일을 만들고 다음과 같이 입력합니다.
+```
+{
+  "presets": [
+    "@babel/preset-env",
+    "@babel/preset-react"
+  ]
+}
+
+```
+
+`babel`은 `ES6` 문법을 사용하기 위함이며, `() => {}` 같은 문장을 `function(){}` 으로 translate 해줍니다.  
+  
+  
+다음은 `webpack.config.js`파일을 만들고 다음과 같이 작성합니다.
+```
+const HtmlWebPackPlugin = require("html-webpack-plugin");
+
+module.exports = {
+  module: {
+    rules: [
+    {
+      test: /\.js$/,
+      exclude: /node_modules/,
+      use: {
+        loader: 'babel-loader'
+      }
+    }, {
+      test: /\.html$/,
+      use: [
+      {
+        loader: 'html-loader'
+      }
+      ]
+    }
+    ]
+  },
+  plugins: [
+    new HtmlWebPackPlugin({
+      template: __dirname + '/public/index.html',
+      filename: './index.html'
+    })
+  ]
+}
+```
+  
+  
+`public/index.html` 파일을 만들고 다음과 같이 작성합니다.
+```
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+  </head>
+  <body>
+    <div id="root">
+    </div>
+  </body>
+</html>
+```
+
+`src/server/server.js` 파일을 다음과 같이 작성합니다.
+```
+import express from 'express';
+const app = express();
+
+import webpack from 'webpack';
+import middleware from 'webpack-dev-middleware';
+import webpackConfig from '../../webpack.config';
+const compiler = webpack(webpackConfig);
+
+const PORT = process.env.PORT || 8080;
+
+app.use(middleware(compiler, {
+  
+}));
+
+app.get('/api', function(req, res) {
+  res.send('Hi I am DongKyoo!');
+});
+
+app.listen(PORT, '0.0.0.0',  function() {
+  console.log("DongKyoo's server is starting!" + PORT);
+});
+```
+이 부분이 제일 중요합니다. 기존에 `npm start`를 통해 알 수 없는 자동화 툴로 `React`가 켜졌다면 그 작업을 수동으로 해주는 부분입니다.  
+  
+몰랐을 수도 있지만 `babel`과 `webpack`설정 또한 자동으로 이루어지고 있었습니다.  
+  
+다음은 클라이언트(React) 소스입니다. `src/client/user.js`를 만들고 다음과 같이 작성합니다.
+```
+import React, { Component } from "react";
+import ReactDOM from "react-dom";
+
+class User extends Component {
+    render() {
+      return (<div>hi</div>)
+    }
+}
+
+const wrapper = document.getElementById("root");
+ReactDOM.render(<User />, wrapper);
+
+export default User;
+```
+
+마지막으로 `webpack`은 자동으로 `src/index.js`를 찾도록 설정되어 있어서 `src/index.js`를 만들고 다음과 같이 수정합니다.
+
+```
+import User from "./client/user"; 
+```
+
+`babel`을 통해 번역된 js파일을 node로 실행하기 위해 다음 명령어로 `babel-node`를 설치합니다.
+```
+npm install -g @babel/node
+```
+설치가 되었으면 다음 명령어로 서버를 실행합니다.
+```
+babel-node src/server/server.js
+```
+  
+  
+그럼 다음과 같이 실행됩니다.  
+![run](https://user-images.githubusercontent.com/10896116/46278039-02f74980-c5a0-11e8-83bc-06b52705163b.PNG)
+  
+  
+저는 원격 서버라 url이 `35.232.22.98`이지만 여러분들은 `localhost:8080`으로 접속하면 될 것입니다.  
+  
+`React 렌더링 된 모습`  
+![result1](https://user-images.githubusercontent.com/10896116/46278037-025eb300-c5a0-11e8-89b1-4b0c97cdfd6a.PNG)  
+  
+`Node.js 서버에서 넘어온 메세지`  
+![result2](https://user-images.githubusercontent.com/10896116/46278038-02f74980-c5a0-11e8-937b-965ca6e8a3bd.PNG)  
+  
+  
+
+=== 여기까지입니다 ===  
+이후 내용은 바뀐 프로젝트로 다시 작성될 예정입니다.
+====
+
+
 ## 프로젝트 생성
 node.js와 npm은 노드 튜토리얼에서 모두 설치한 상태이기 때문에 따로 설명하진 않겠습니다.  
 아래 명령어를 통해 자동으로 react 앱을 만들어주는 노드 모듈을 설치합니다.  
@@ -726,191 +919,3 @@ ON p.user_id = u.id
 ![db4](https://user-images.githubusercontent.com/10896116/46241439-fb477180-c3f4-11e8-8018-91a9e9c529e1.PNG)
 
 차이가 눈에 보이시나요?
-
-
-### React 서버와 Node 서버 합치기..!
-사실 그 전부터 계속 노력해봤는데 원격PC에 대한 이해도가 낮은 덕분에 수 많은 네트워크 이슈로 실패한 `React 서버와 Node서버 합치기`이다. 결론부터 말하자면 일단 성공했다.. 핡
-
-우선 `package.json`을 다음과 같이 수정한다.
-```
-{
-  "name": "reacttutorial",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "build": "webpack"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Reminsce/ReactTutorial.git"
-  },
-  "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@babel/cli": "^7.0.0",
-    "express": "^4.16.3",
-    "mysql2": "^1.6.1",
-    "npm": "^6.4.1",
-    "sequelize": "^4.39.0"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.1.2",
-    "@babel/preset-env": "^7.1.0",
-    "@babel/preset-react": "^7.0.0",
-    "babel-core": "^7.0.0-bridge.0",
-    "babel-loader": "^8.0.4",
-    "html-loader": "^0.5.5",
-    "html-webpack-plugin": "^3.2.0",
-    "react": "^16.5.2",
-    "react-dom": "^16.5.2",
-    "webpack": "^4.20.2",
-    "webpack-cli": "^3.1.2",
-    "webpack-dev-middleware": "^3.4.0",
-    "webpack-dev-server": "^3.1.9"
-  }
-}
-```
-그리고 `npm install`.
-
-
-설치가 완료됐으면 폴더를 미리 만들어둡시다.  
-```
-mkdir -p public src/server src/client
-```
-  
-  
-`babel` 설정을 위한 `.babelrc` 파일을 만들고 다음과 같이 입력합니다.
-```
-{
-  "presets": [
-    "@babel/preset-env",
-    "@babel/preset-react"
-  ]
-}
-
-```
-
-`babel`은 `ES6` 문법을 사용하기 위함이며, `() => {}` 같은 문장을 `function(){}` 으로 translate 해줍니다.  
-  
-  
-다음은 `webpack.config.js`파일을 만들고 다음과 같이 작성합니다.
-```
-const HtmlWebPackPlugin = require("html-webpack-plugin");
-
-module.exports = {
-  module: {
-    rules: [
-    {
-      test: /\.js$/,
-      exclude: /node_modules/,
-      use: {
-        loader: 'babel-loader'
-      }
-    }, {
-      test: /\.html$/,
-      use: [
-      {
-        loader: 'html-loader'
-      }
-      ]
-    }
-    ]
-  },
-  plugins: [
-    new HtmlWebPackPlugin({
-      template: __dirname + '/public/index.html',
-      filename: './index.html'
-    })
-  ]
-}
-```
-  
-  
-`public/index.html` 파일을 만들고 다음과 같이 작성합니다.
-```
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-  </head>
-  <body>
-    <div id="root">
-    </div>
-  </body>
-</html>
-```
-
-`src/server/server.js` 파일을 다음과 같이 작성합니다.
-```
-import express from 'express';
-const app = express();
-
-import webpack from 'webpack';
-import middleware from 'webpack-dev-middleware';
-import webpackConfig from '../../webpack.config';
-const compiler = webpack(webpackConfig);
-
-const PORT = process.env.PORT || 8080;
-
-app.use(middleware(compiler, {
-  
-}));
-
-app.get('/api', function(req, res) {
-  res.send('Hi I am DongKyoo!');
-});
-
-app.listen(PORT, '0.0.0.0',  function() {
-  console.log("DongKyoo's server is starting!" + PORT);
-});
-```
-이 부분이 제일 중요합니다. 기존에 `npm start`를 통해 알 수 없는 자동화 툴로 `React`가 켜졌다면 그 작업을 수동으로 해주는 부분입니다.  
-  
-몰랐을 수도 있지만 `babel`과 `webpack`설정 또한 자동으로 이루어지고 있었습니다.  
-  
-다음은 클라이언트(React) 소스입니다. `src/client/user.js`를 만들고 다음과 같이 작성합니다.
-```
-import React, { Component } from "react";
-import ReactDOM from "react-dom";
-
-class User extends Component {
-    render() {
-      return (<div>hi</div>)
-    }
-}
-
-const wrapper = document.getElementById("root");
-ReactDOM.render(<User />, wrapper);
-
-export default User;
-```
-
-마지막으로 `webpack`은 자동으로 `src/index.js`를 찾도록 설정되어 있어서 `src/index.js`를 만들고 다음과 같이 수정합니다.
-
-```
-import User from "./client/user"; 
-```
-
-`babel`을 통해 번역된 js파일을 node로 실행하기 위해 다음 명령어로 `babel-node`를 설치합니다.
-```
-npm install -g @babel/node
-```
-설치가 되었으면 다음 명령어로 서버를 실행합니다.
-```
-babel-node src/server/server.js
-```
-  
-  
-그럼 다음과 같이 실행됩니다.  
-![run](https://user-images.githubusercontent.com/10896116/46278039-02f74980-c5a0-11e8-83bc-06b52705163b.PNG)
-  
-  
-저는 원격 서버라 url이 `35.232.22.98`이지만 여러분들은 `localhost:8080`으로 접속하면 될 것입니다.  
-  
-`React 렌더링 된 모습`  
-![result1](https://user-images.githubusercontent.com/10896116/46278037-025eb300-c5a0-11e8-89b1-4b0c97cdfd6a.PNG)  
-  
-`Node.js 서버에서 넘어온 메세지`  
-![result2](https://user-images.githubusercontent.com/10896116/46278038-02f74980-c5a0-11e8-937b-965ca6e8a3bd.PNG)  
-  
-  
