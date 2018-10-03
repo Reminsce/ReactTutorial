@@ -885,6 +885,7 @@ app.get('/api/users', function(req, res) {
 ## Sequelize
 와 같이 `가공된 형태`의 데이터를 만들어주는 것을 `orm(Object Relational Mapping)`이라고 합니다. 그리고 지금부터 `Node.js`의 강력한 `ORM` 모듈 `Sequelize`를 소개합니다.  
   
+### 설치
 다음 명령어로 sequelize 와 mysql2를 설치합니다
 ```
 npm install --save sequelize
@@ -894,6 +895,7 @@ npm install --save mysql2
   
 설치가 완료되었다면 `server.js`를 다음과 같이 수정합니다.
 
+### 
 ```
 import express from 'express';
 const app = express();
@@ -913,7 +915,7 @@ const sequelize = new Sequelize('TUTORIAL', 'root', 'your password', {
 });
 
 // 테이블 정의
-const User = sequelize.define('tbl_users', {
+const User = sequelize.define('user', {
   id: {
     type: Sequelize.STRING,
     primaryKey: true
@@ -921,7 +923,8 @@ const User = sequelize.define('tbl_users', {
   name: Sequelize.STRING
 }, {
   createdAt: false,
-  updatedAt: false
+  updatedAt: false,
+  tableName: 'tbl_users'
 });
 ```
 
@@ -941,22 +944,18 @@ app.get('/api/users', function(req, res) {
 이어서 `server.js`를 다음과 같이 수정합니다.  
 ```
 // tbl_user_playgrounds 테이블 정의
-const Playground = sequelize.define('tbl_user_playgrounds', {
+const Playground = sequelize.define('playground', {
   user_id: Sequelize.STRING,
   playground: Sequelize.STRING
 }, {
   createdAt: false,
-  updatedAt: false
+  updatedAt: false,
+  tableName: 'tbl_user_playgrounds'
 });
 
 User.hasMany(Playground, {
   foreignKey: 'user_id',
   sourceKey: 'id'
-});
-
-Playground.belongsTo(User, {
-  foreignKey: 'user_id',
-  targetKey: 'id'
 });
 ```
 `Sequealize`에서는 테이블 정의 시 데이터가 만들어진 시점을 저장하는 `createdAt`과 데이터가 마지막으로 수정된 시점을 저장하는 `updatedAt` 컬럼을 자동으로 생성합니다.  
@@ -976,21 +975,7 @@ User.hasMany(Playground, {
 즉 User의 `id`다 라는 뜻입니다.  
   
 한 가지 알아둬야 할 것은 `User.someFunction(Playground);` 형태의 함수가 있다면 `source`는 `User`, `target`은 `Playground`입니다.  
-  
-`User`에 `Playground`와의 관계를 명시했으니 `Playground`에도 `User`와의 관계를 명시해줘야 합니다.  
-```
-Playground.belongsTo(User, {
-  foreignKey: 'user_id',
-  targetKey: 'id'
-});
-```
-`Playground.belongsTo` 문장 그대로 `Playground`는 `User`에 엮인다는 의미입니다.  
-  
-`ForeignKey`는 위의 `hasMany`와 동일하게 적어주고,  
-`targetKey: 'id'`도 `sourceKey`가 `targetKey`로 변경되었을 뿐 변하지 않습니다.  
-  
-다만 위에서 설명했듯이 `Playground.someFunction(User);` 형태의 함수이므로 `source`는 `Playground`, `target`은 `User`입니다.  
-  
+
 현재까지의 모든 `server.js` 소스입니다.
 ```
 import express from 'express';
@@ -1007,7 +992,7 @@ const sequelize = new Sequelize('TUTORIAL', 'root', 'your password', {
   dialect: 'mysql'
 });
 
-const User = sequelize.define('tbl_users', {
+const User = sequelize.define('user', {
   id: {
     type: Sequelize.STRING,
     primaryKey: true
@@ -1015,27 +1000,23 @@ const User = sequelize.define('tbl_users', {
   name: Sequelize.STRING
 }, {
   createdAt: false,
-  updatedAt: false
+  updatedAt: false,
+  tableName: 'tbl_users'
 });
 
-const Playground = sequelize.define('tbl_user_playgrounds', {
+const Playground = sequelize.define('playground', {
   user_id: Sequelize.STRING,
   playground: Sequelize.STRING
 }, {
   createdAt: false,
-  updatedAt: false
+  updatedAt: false,
+  tableName: 'tbl_user_playgrounds'
 });
 
 User.hasMany(Playground, {
   foreignKey: 'user_id',
   sourceKey: 'id'
 });
-
-Playground.belongsTo(User, {
-  foreignKey: 'user_id',
-  targetKey: 'id'
-});
-
 
 const PORT = process.env.PORT || 8080;
 
@@ -1058,3 +1039,135 @@ app.listen(PORT, '0.0.0.0',  function() {
   
 우리는 분명 `Users`와 `Playground`의 관계를 정의내렸는데도 말이죠  
   
+### Association
+이를 해결하기 위해 `findAll` 함수를 다음과 같이 수정합시다.  
+```
+User.findAll({
+    include: [{
+      model: Playground,
+      where: {user_id: Sequelize.col('user.id')}, // WHERE playground.user_id = user.id
+      attributes: ['playground']  // Playground의 columns 중에서 playground column만 뽑아옴
+    }]
+  }).then((reuslt) => {
+    res.send(reuslt);
+  });
+```
+
+그리고 `api/users`에 접속하면 결과가 나오지 않을 것입니다.  
+  
+### 
+충격적이게도 `Sequelize`는 모든 테이블에 `Primary Key`가 필요하다고 합니다.  
+  
+하지만 `tbl_user_playgrounds`에는 `Primary Key`가 지정되어 있지 않습니다.  
+  
+`mysql`을 통해 다음과 같이 `id` 컬럼과 `Primary Key`를 추가해줍시다.  
+![query](https://user-images.githubusercontent.com/10896116/46391670-11b53c00-c719-11e8-8e04-89eb2ef5c9d5.PNG)
+
+`ALTER TABLE tbl_user_playgrounds` = `tbl_user_playgrounds`를 수정하겠다.  
+  
+`ADD COLUMN` = `column`을 수정하겠다. (이후는 column의 정보)  
+  
+`id INT PRIMARY KEY AUTO_INCREMENT` = 이름은 `id`, 자료형은 `INT`, `Primary Key`이며, `AUTO_INCREMENT` 자동으로 증가한다.  
+자동으로 증가한다는 뜻은 `tbl_user_playgrounds`에 row를 insert 할 때 id에 null 값을 주면 현재 테이블의 id의 최댓값에서 1 더한 값이 자동으로 들어간다는 뜻입니다.  
+  
+`FIRST`는 `column`이 추가될 위치를 명시하는데 `맨 앞`을 뜻하는 키워드입니다.  
+즉 `user_id|playground` 였던 테이블이 `id|user_id|playground`로 바뀌게 됩니다.  
+  
+![result3](https://user-images.githubusercontent.com/10896116/46391821-b172ca00-c719-11e8-993c-416b3f046af2.PNG)
+  
+  
+위와 같이 `id`에 순차적으로 값이 들어갔음을 볼 수 있습니다.  
+  
+db를 수정했으면 `sequelize`또한 수정해주어야 합니다.
+  
+`Playground`를 다음과 같이 수정합니다.
+```
+const Playground = sequelize.define('playground', {
+  id: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    autoincrement: true
+  },
+  user_id: Sequelize.STRING,
+  playground: Sequelize.STRING
+}, {
+  createdAt: false,
+  updatedAt: false,
+  tableName: 'tbl_user_playgrounds'
+});
+```
+
+현재까지의 모든 `server.js` 소스입니다.
+```
+import express from 'express';
+const app = express();
+
+import webpack from 'webpack';
+import middleware from 'webpack-dev-middleware';
+import webpackConfig from '../../webpack.config';
+const compiler = webpack(webpackConfig);
+
+import Sequelize from 'sequelize';
+const sequelize = new Sequelize('TUTORIAL', 'root', 'your password', {
+  host: 'localhost',
+  dialect: 'mysql'
+});
+
+const User = sequelize.define('user', {
+  id: {
+    type: Sequelize.STRING,
+    primaryKey: true
+  },
+  name: Sequelize.STRING
+}, {
+  createdAt: false,
+  updatedAt: false,
+  tableName: 'tbl_users'
+});
+
+const Playground = sequelize.define('playground', {
+  id: {
+    type: Sequelize.INTEGER,
+    primaryKey: true,
+    autoincrement: true
+  },
+  user_id: Sequelize.STRING,
+  playground: Sequelize.STRING
+}, {
+  createdAt: false,
+  updatedAt: false,
+  tableName: 'tbl_user_playgrounds'
+});
+
+User.hasMany(Playground, {
+  foreignKey: 'user_id',
+  sourceKey: 'id'
+});
+
+const PORT = process.env.PORT || 8080;
+
+app.use(middleware(compiler, {
+}));
+
+app.get('/api/users', function(req, res) {
+  User.findAll({
+    include: [{
+      model: Playground,
+      where: {user_id: Sequelize.col('user.id')},
+      attributes: ['playground']
+    }]
+  }).then((reuslt) => {
+    res.send(reuslt);
+  });
+});
+
+app.listen(PORT, '0.0.0.0',  function() {
+  console.log("http://35.232.22.98 server is starting!" + PORT);
+});
+```
+
+그리고 결과는 다음과 같습니다.  
+  
+![result4](https://user-images.githubusercontent.com/10896116/46392126-1b3fa380-c71b-11e8-8bbf-758ac7a07314.PNG)  
+
+우리가 완벽히 원하던 모양은 아니지만 `id`에 맞게 `playgrounds`가 배열의 형태로 묶여진 모습을 볼 수 있습니다.  
