@@ -824,7 +824,7 @@ JOIN tbl_user_playgrounds p
 SELECT
     u.id, u.name, p.playground
 FROM tbl_users u
-JOIN tbl_user_playgrounds p
+LEFT JOIN tbl_user_playgrounds p
 ON p.user_id = u.id
 // Return [{u.id='20162489', u.name='dongkyoo', p.playground=null}, {...}, ...]
 ```
@@ -842,3 +842,219 @@ ON p.user_id = u.id
 ![db4](https://user-images.githubusercontent.com/10896116/46241439-fb477180-c3f4-11e8-8018-91a9e9c529e1.PNG)
 
 차이가 눈에 보이시나요?
+
+`tbl_user_playgrounds` 를 다음과 같은 결과가 나오도록 값을 `INSERT` 해보세요.  
+  
+![db](https://user-images.githubusercontent.com/10896116/46389829-589e3400-c70f-11e8-8616-8ba21164acf8.PNG)
+
+
+`server.js`를 다음과 같이 수정합니다.
+```
+app.get('/api/users', function(req, res) {
+  conn.query('SELECT u.id, u.name, p.playground FROM tbl_users u LEFT JOIN tbl_user_playgrounds p ON p.user_id = u.id', function(err, result) {
+    if (err) throw err;
+    res.send(result);
+  });
+});
+```
+
+`/api/users`에 접속하면 다음과 같은 결과가 화면에 나옵니다.  
+  
+![result](https://user-images.githubusercontent.com/10896116/46389861-9602c180-c70f-11e8-90fe-5235e8df676d.PNG)
+
+```
+[{"id":"20162489","name":"dongkyoo","playground":"Gaeryong"},
+{"id":"20161818","name":"yujeong","playground":"Nonsan"},
+{"id":"20161818","name":"yujeong","playground":"Strawberry farm"},
+{"id":"20161234","name":"ham","playground":"TK"},
+{"id":"20169876","name":"aaaaajeong","playground":"Incheon"},
+{"id":"20169876","name":"aaaaajeong","playground":"International Airport"}]
+```
+하지만 이는 우리가 원하는 형태가 아닙니다.  
+  
+우리가 원하는 형태는 다음과 같습니다.  
+```
+[{"id":"20162489","name":"dongkyoo","playgrounds":["Gaeryong"]},
+{"id":"20161818","name":"yujeong","playgrounds":["Nonsan", "Strawberry farm"]},
+{"id":"20161234","name":"ham","playgrounds":["TK"]},
+{"id":"20169876","name":"aaaaajeong","playgrounds":["Incheon", "International Airport"]}]
+```
+  
+차이를 아시겠나요? `id`를 기준으로 `playgrounds`가 배열로서 묶여서 표현되었습니다.  
+  
+## Sequelize
+와 같이 `가공된 형태`의 데이터를 만들어주는 것을 `orm(Object Relational Mapping)`이라고 합니다. 그리고 지금부터 `Node.js`의 강력한 `ORM` 모듈 `Sequelize`를 소개합니다.  
+  
+다음 명령어로 sequelize 와 mysql2를 설치합니다
+```
+npm install --save sequelize
+npm install --save mysql2
+```
+`sequelize`는 `mysql`이 아닌 `mysql2`를 지원합니다. 2라고 해서 다른게 아니라 그냥 이름만 다른 mysql이니 mysql2를 또 공부할 필요는 없습니다.  
+  
+설치가 완료되었다면 `server.js`를 다음과 같이 수정합니다.
+
+```
+import express from 'express';
+const app = express();
+
+import webpack from 'webpack';
+import middleware from 'webpack-dev-middleware';
+import webpackConfig from '../../webpack.config';
+const compiler = webpack(webpackConfig);
+
+// Sequelize
+import Sequelize from 'sequelize';
+
+// DB 접속
+const sequelize = new Sequelize('TUTORIAL', 'root', 'your password', {
+  host: 'localhost',
+  dialect: 'mysql'
+});
+
+// 테이블 정의
+const User = sequelize.define('tbl_users', {
+  id: {
+    type: Sequelize.STRING,
+    primaryKey: true
+  },
+  name: Sequelize.STRING
+}, {
+  createdAt: false,
+  updatedAt: false
+});
+```
+
+`server.js`의 `api/users`부분도 다음과 같이 수정합니다.
+```
+app.get('/api/users', function(req, res) {
+  User.findAll().then((reuslt) => {
+    res.send(reuslt);
+  });
+});
+```
+
+그리곤 `api/users`에 접속하면 다음과 같은 결과가 나올 것입니다.  
+  
+![result2](https://user-images.githubusercontent.com/10896116/46390454-e29bcc00-c712-11e8-9bc8-16a8e2f89fda.PNG)
+  
+이어서 `server.js`를 다음과 같이 수정합니다.  
+```
+// tbl_user_playgrounds 테이블 정의
+const Playground = sequelize.define('tbl_user_playgrounds', {
+  user_id: Sequelize.STRING,
+  playground: Sequelize.STRING
+}, {
+  createdAt: false,
+  updatedAt: false
+});
+
+User.hasMany(Playground, {
+  foreignKey: 'user_id',
+  sourceKey: 'id'
+});
+
+Playground.belongsTo(User, {
+  foreignKey: 'user_id',
+  targetKey: 'id'
+});
+```
+`Sequealize`에서는 테이블 정의 시 데이터가 만들어진 시점을 저장하는 `createdAt`과 데이터가 마지막으로 수정된 시점을 저장하는 `updatedAt` 컬럼을 자동으로 생성합니다.  
+  
+하지만 우리는 그것을 원하지 않으므로 `define`함수의 마지막 `option` 파라미터에 `{createdAt: false, updatedAt: false}`를 넘김으로서 이를 막습니다.  
+  
+```
+User.hasMany(Playground, {
+  foreignKey: 'user_id',
+  sourceKey: 'id'
+});
+```
+이는 `User`와 `Playground` 사이의 `1:N` 관계를 정의합니다.  
+  
+`foreignKey: 'user_id'`는 Playground의 `user_id`가 `Foreign Key`로 잡혀있고, 그 연결대상은 `sourceKey: 'id'`  
+  
+즉 User의 `id`다 라는 뜻입니다.  
+  
+한 가지 알아둬야 할 것은 `User.someFunction(Playground);` 형태의 함수가 있다면 `source`는 `User`, `target`은 `Playground`입니다.  
+  
+`User`에 `Playground`와의 관계를 명시했으니 `Playground`에도 `User`와의 관계를 명시해줘야 합니다.  
+```
+Playground.belongsTo(User, {
+  foreignKey: 'user_id',
+  targetKey: 'id'
+});
+```
+`Playground.belongsTo` 문장 그대로 `Playground`는 `User`에 엮인다는 의미입니다.  
+  
+`ForeignKey`는 위의 `hasMany`와 동일하게 적어주고,  
+`targetKey: 'id'`도 `sourceKey`가 `targetKey`로 변경되었을 뿐 변하지 않습니다.  
+  
+다만 위에서 설명했듯이 `Playground.someFunction(User);` 형태의 함수이므로 `source`는 `Playground`, `target`은 `User`입니다.  
+  
+현재까지의 모든 `server.js` 소스입니다.
+```
+import express from 'express';
+const app = express();
+
+import webpack from 'webpack';
+import middleware from 'webpack-dev-middleware';
+import webpackConfig from '../../webpack.config';
+const compiler = webpack(webpackConfig);
+
+import Sequelize from 'sequelize';
+const sequelize = new Sequelize('TUTORIAL', 'root', 'your password', {
+  host: 'localhost',
+  dialect: 'mysql'
+});
+
+const User = sequelize.define('tbl_users', {
+  id: {
+    type: Sequelize.STRING,
+    primaryKey: true
+  },
+  name: Sequelize.STRING
+}, {
+  createdAt: false,
+  updatedAt: false
+});
+
+const Playground = sequelize.define('tbl_user_playgrounds', {
+  user_id: Sequelize.STRING,
+  playground: Sequelize.STRING
+}, {
+  createdAt: false,
+  updatedAt: false
+});
+
+User.hasMany(Playground, {
+  foreignKey: 'user_id',
+  sourceKey: 'id'
+});
+
+Playground.belongsTo(User, {
+  foreignKey: 'user_id',
+  targetKey: 'id'
+});
+
+
+const PORT = process.env.PORT || 8080;
+
+app.use(middleware(compiler, {
+  
+}));
+
+app.get('/api/users', function(req, res) {
+  User.findAll().then((reuslt) => {
+    res.send(reuslt);
+  });
+});
+
+app.listen(PORT, '0.0.0.0',  function() {
+  console.log("http://35.232.22.98 server is starting!" + PORT);
+});
+```
+
+그리고 다시 `api/users`로 접속해보아도 결과는 바뀌지 않습니다.  
+  
+우리는 분명 `Users`와 `Playground`의 관계를 정의내렸는데도 말이죠  
+  
