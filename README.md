@@ -194,12 +194,6 @@ babel-node src/server/server.js
   
 `Node.js 서버에서 넘어온 메세지`  
 ![result2](https://user-images.githubusercontent.com/10896116/46278038-02f74980-c5a0-11e8-937b-965ca6e8a3bd.PNG)  
-  
-  
-
-=== 여기까지입니다 ===  
-이후 내용은 바뀐 프로젝트로 다시 작성될 예정입니다.
-====
 
 ## React 기본
 본 튜토리얼에서 `src` 폴더 내의 `client` 디렉토리가 `React` 를 담당합니다.  
@@ -1171,3 +1165,65 @@ app.listen(PORT, '0.0.0.0',  function() {
 ![result4](https://user-images.githubusercontent.com/10896116/46392126-1b3fa380-c71b-11e8-8bbf-758ac7a07314.PNG)  
 
 우리가 완벽히 원하던 모양은 아니지만 `id`에 맞게 `playgrounds`가 배열의 형태로 묶여진 모습을 볼 수 있습니다.  
+
+원래 생각했던 데이터의 꼴은
+```
+[{
+    name: 'dongkyoo',
+    playgrounds; ['Gaeryong', 'Seoul']
+}]
+```
+이였는데 실제 데이터는
+```
+[{
+    name: 'dongkyoo',
+    playgrounds:[{
+        playground: 'Gaeryong'
+    },{
+        playground: 'Seoul'
+    }]
+}]
+```
+이므로 `playgrounds`의 각 element에 `playground`라는 `key`값이 생겼음을 알 수 있습니다.  
+  
+따라서 `React`의 소스도 조금 변경될 필요가 있습니다.  
+  
+`src/client/user.js` 파일 내 `render`함수의 `playgrounds` 부분을 다음과 같이 수정합니다.
+```
+render() {
+    const users = this.state.users.map(user => {
+        const playgrounds = user.playgrounds.map(playground => {
+            return (
+              <li>{playground.playground}</li>          // 기존 : <li>{playground}</li>
+            )
+          });
+        ...
+```
+  
+그리고는 `localhost:8080`에 접속하면 다음과 같이 화면에 뜨게 됩니다.  
+  
+![default](https://user-images.githubusercontent.com/10896116/46578239-8ba93600-ca35-11e8-89d4-c0bf25589416.PNG)
+  
+제가 데이터를 잘못 넣어서 아정이가 인천에서 놀게되었지만 어찌됐든 잘 뜹니다.  
+  
+이로서 React 튜토리얼을 마칩니다.
+
+## Summary
+튜토리얼을 작성하다보니 다소 길어지게 된 점 미안하게 생각합니다.  
+  
+일반적인 React 튜토리얼이라기보다는 프로젝트 생성부터 서버 개설, DB 연동까지 하나의 웹어플리케이션 개발 프로세스를 보이고 싶었습니다.  
+  
+1. [프로젝트 생성](https://github.com/Reminsce/ReactTutorial#react-%EC%84%9C%EB%B2%84%EC%99%80-node-%EC%84%9C%EB%B2%84-%ED%95%A9%EC%B9%98%EA%B8%B0)
+2. 디자인  
+이 부분은 기술적인 부분은 아니지만 굉장히 중요합니다. 우리가 어떤 기능을 만들지, 완성된 모습을 그림으로 그릴 수 있다는 것은 분명한 목표가 생기는 일이기 때문입니다. 목표가 분명해야 설계도, 개발도 시작 할 수 있습니다.
+3. [데이터 설계](https://github.com/Reminsce/ReactTutorial#%EB%85%B8%EB%93%9C%EC%97%90-mysql-%EC%BF%BC%EB%A6%AC%EB%AC%B8-%EC%A0%81%EC%96%B4%EB%B3%B4%EA%B8%B0)  
+어떤 데이터가 어떤 꼴로 제공될 때 본 기능을 만들어 낼 수 있는지 설계하는 것은 매우 중요합니다. 가령 예를 들면 `게시글 작성`이라는 기능을 구현한다면 "음~ 게시글에는 제목, 내용, 작성자, 작성 시간"이 필요하니까 데이터는 `article: {title:'hi', content: 'bye', author: 'dongkyoo', createdAt: '2018-10-07'}` 이런 모양이 좋겠네~ 라고 생각 할 수 있어야 합니다.
+4. 표현  
+데이터 설계 및 DB 연동을 통해 원하는 꼴의 데이터를 뽑아 냈다면 이를 `React`로 표현하기만 하면 됩니다.
+
+  
+  
+아무리 큰 프로젝트라도 본 프로세스는 동일하게 적용됩니다.  
+어떤 작업을 더 중요시여기냐에 따라 약간의 변형은 있겠지만 결코 생략되진 않습니다.  
+본 튜토리얼을 참고하여 내가 어느 단계에 있는지 다음에 무엇을 해야할 지 알게 된다면  
+여러분은 뭐든지 만들어 낼 수 있습니다!
