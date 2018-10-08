@@ -653,7 +653,7 @@ module.exports = function() {
 };
 ```
 
-이제 `index.js`로 돌아와 맨 윗부분을 다음과 같이 수정합니다.
+이제 `server.js`로 돌아와 맨 윗부분을 다음과 같이 수정합니다.
 ```
 import express from 'express';
 const app = express();
@@ -677,7 +677,7 @@ mysql is connected successfully
 여기까지는 [이곳](https://cheese10yun.github.io/mysql-node/)을 참조하여(?) 사실 거의 베껴왔습니다.  
 
 ## 노드에 MySQL 쿼리문 적어보기
-`노드서버 - index.js`를 다음과 같이 수정합니다.
+`노드서버 - server.js`를 다음과 같이 수정합니다.
 ```
 app.get('/api/users', function(req, res) {
   conn.query('SELECT * FROM tbl_users', function(err, result) {
